@@ -1389,56 +1389,25 @@ function deserializeUploadRows(rows) {
   }).filter(r => r.date);
 }
 
-function mergeCsvUploadStores(local, remote, { preferLocalHupp = false } = {}) {
+function mergeCsvUploadStores(local, remote) {
   const out = JSON.parse(JSON.stringify(remote || {}));
-  Object.entries(local || {}).forEach(([projId, files]) => {
-    if (projId === 'hupp') {
-      const localFiles = pruneHuppUploads(files || {});
-      if (preferLocalHupp || !out.hupp) {
-        // При сохранении локальное состояние авторитетно, включая удаление.
-        out.hupp = localFiles;
-      } else if (Object.keys(localFiles).length) {
-        // При загрузке побеждает более свежая копия, чтобы старый браузер
-        // не откатил CSV, загруженный с другого устройства.
-        const localAt = String(getLatestHuppUpload(localFiles)?.uploadedAt || '');
-        const remoteAt = String(getLatestHuppUpload(out.hupp)?.uploadedAt || '');
-        out.hupp = localAt >= remoteAt ? localFiles : pruneHuppUploads(out.hupp);
-      }
-      return;
-    }
-    if (!out[projId]) out[projId] = {};
-    Object.entries(files || {}).forEach(([id, file]) => {
-      const prev = out[projId][id];
+  const projIds = new Set([...Object.keys(out), ...Object.keys(local || {})]);
+  projIds.forEach(projId => {
+    const next = { ...(out[projId] || {}) };
+    Object.entries((local || {})[projId] || {}).forEach(([id, file]) => {
+      const prev = next[id];
       if (!prev) {
-        out[projId][id] = file;
+        next[id] = file;
         return;
       }
       const prevAt = String(prev.uploadedAt || '');
       const nextAt = String(file.uploadedAt || '');
-      if (nextAt >= prevAt) out[projId][id] = file;
+      const localRicher = !!(file.text && !prev.text);
+      next[id] = (localRicher || nextAt >= prevAt) ? { ...prev, ...file } : { ...file, ...prev };
     });
+    out[projId] = next;
   });
-  if (out.hupp && !Object.prototype.hasOwnProperty.call(local || {}, 'hupp')) {
-    out.hupp = pruneHuppUploads(out.hupp);
-  }
   return out;
-}
-
-/** Hupp: не суммировать старые реаплоады — брать только последний полный CSV. */
-function pruneHuppUploads(files) {
-  const entries = Object.entries(files || {});
-  if (entries.length <= 1) return files || {};
-  const [id, file] = entries.sort((a, b) =>
-    String(b[1]?.uploadedAt || '').localeCompare(String(a[1]?.uploadedAt || ''))
-  )[0];
-  return id ? { [id]: file } : {};
-}
-
-function getLatestHuppUpload(files) {
-  const entries = Object.entries(pruneHuppUploads(files || {}));
-  if (!entries.length) return null;
-  const [id, file] = entries[0];
-  return { id, ...file };
 }
 
 function uploadsForRemote(all) {
@@ -1464,7 +1433,7 @@ function uploadsForRemote(all) {
 
 async function jbSaveCsvUploads(localUploads) {
   const remote = await jbLoadCsvUploads().catch(() => ({}));
-  const merged = mergeCsvUploadStores(localUploads, remote || {}, { preferLocalHupp: true });
+  const merged = mergeCsvUploadStores(localUploads, remote || {});
   const remotePayload = uploadsForRemote(merged);
   await jbSaveRecord(raw => {
     const rest = raw.filter(p => p && p.id !== '_csv_uploads');
@@ -1475,22 +1444,19 @@ async function jbSaveCsvUploads(localUploads) {
 
 async function hydrateCsvUploadsFromRemote() {
   if (!HUPP_CSV_CLOUD_SYNC) return 'skipped';
-  const remote = await jbLoadCsvUploads().catch(() => null);
+  const remote = await Promise.race([
+    jbLoadCsvUploads().catch(() => null),
+    sleep(8000).then(() => null),
+  ]);
   const local = loadCsvUploads();
   const merged = mergeCsvUploadStores(local, remote || {});
-  if (merged.hupp) merged.hupp = pruneHuppUploads(merged.hupp);
   if (JSON.stringify(merged) !== JSON.stringify(local)) {
     localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(merged));
   }
-  const shouldPush = JSON.stringify(merged) !== JSON.stringify(remote || {});
+  const shouldPush = remote != null && JSON.stringify(merged) !== JSON.stringify(remote || {});
   if (shouldPush) {
-    try {
-      const saved = await jbSaveCsvUploads(merged);
-      localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(saved));
-      return 'synced';
-    } catch (e) {
-      console.warn('CSV uploads cloud sync failed:', e.message || e);
-    }
+    saveCsvUploads(merged, { awaitCloud: false });
+    return 'synced';
   }
   return Object.keys(merged).length ? 'merged' : 'none';
 }
@@ -2043,16 +2009,31 @@ function loadCsvUploads() {
   }
 }
 
-async function saveCsvUploads(all) {
+async function saveCsvUploads(all, { awaitCloud = false, timeoutMs = 15000 } = {}) {
   localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(all));
   if (!HUPP_CSV_CLOUD_SYNC) return all;
-  try {
+  const sync = async () => {
     const merged = await jbSaveCsvUploads(all);
-    localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(merged));
-    return merged;
+    const current = loadCsvUploads();
+    const finalMerged = mergeCsvUploadStores(current, merged);
+    localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(finalMerged));
+    return finalMerged;
+  };
+  if (!awaitCloud) {
+    Promise.race([
+      sync(),
+      sleep(timeoutMs).then(() => { throw new Error(`csv cloud save timeout ${timeoutMs}ms`); }),
+    ]).catch(e => console.warn('CSV uploads cloud save failed:', e.message || e));
+    return all;
+  }
+  try {
+    return await Promise.race([
+      sync(),
+      sleep(timeoutMs).then(() => { throw new Error(`csv cloud save timeout ${timeoutMs}ms`); }),
+    ]);
   } catch (e) {
     console.warn('CSV uploads cloud save failed:', e.message || e);
-    throw e;
+    return all;
   }
 }
 
@@ -2184,30 +2165,13 @@ function mergeUploadedSources(sources, uploaded, proj) {
 
 /** Сохраняет файл по content-hash: повторная загрузка того же файла не дублирует, разные файлы накапливаются. */
 async function saveUploadedCsv(projId, label, fileName, text) {
+  const hash = await hashUploadText(text);
   const all = loadCsvUploads();
   if (!all[projId]) all[projId] = {};
   const csvRows = parseCSV(text);
-  const p = projects.find(x => x.id === projId);
-  const huppReplace = p && isHuppCsvOnly(p);
-  let rows = parseSheet(text);
-  let sheetColumns = (csvRows[0] || []).map(h => (h || '').trim());
-
-  if (huppReplace) {
-    const previous = getLatestHuppUpload(all[projId]);
-    const previousRows = previous?.rows?.length
-      ? deserializeUploadRows(previous.rows)
-      : (previous?.text ? directSpendRowsFromUploadText(previous.text) : []);
-    // Новый экспорт перекрывает только совпавшие даты. Остальная история spend
-    // сохраняется, поэтому дневной файл не обнуляет предыдущие дни.
-    rows = mergeRowsByDate(previousRows, rows);
-    text = directSpendRowsToCsvText(rows);
-    sheetColumns = ['date', 'spend', 'clicks', 'impressions'];
-  }
-
-  const hash = await hashUploadText(text);
-  const existingId = huppReplace
-    ? (Object.keys(all[projId])[0] || HUPP_UPLOAD_ID)
-    : Object.keys(all[projId]).find(id => all[projId][id]?.hash === hash);
+  const rows = parseSheet(text);
+  const sheetColumns = (csvRows[0] || []).map(h => (h || '').trim());
+  const existingId = Object.keys(all[projId]).find(id => all[projId][id]?.hash === hash);
   if (existingId) {
     const updated = {
       ...all[projId][existingId],
@@ -2219,11 +2183,11 @@ async function saveUploadedCsv(projId, label, fileName, text) {
       text,
       uploadedAt: new Date().toISOString(),
     };
-    all[projId] = huppReplace ? { [HUPP_UPLOAD_ID]: updated } : { ...all[projId], [existingId]: updated };
+    all[projId] = { ...all[projId], [existingId]: updated };
     await saveCsvUploads(all);
-    return { id: huppReplace ? HUPP_UPLOAD_ID : existingId, hash, duplicate: !huppReplace };
+    return { id: existingId, hash, duplicate: true };
   }
-  const id = huppReplace ? HUPP_UPLOAD_ID : `${slugifyCsvLabel(label)}_${shortHash(hash)}`;
+  const id = `${slugifyCsvLabel(label)}_${shortHash(hash)}`;
   const entry = {
     label: (label || id).trim(),
     fileName: fileName || '',
@@ -2233,11 +2197,7 @@ async function saveUploadedCsv(projId, label, fileName, text) {
     rows: serializeUploadRows(rows),
     sheetColumns,
   };
-  if (huppReplace) {
-    all[projId] = { [id]: entry };
-  } else {
-    all[projId][id] = entry;
-  }
+  all[projId][id] = entry;
   await saveCsvUploads(all);
   return { id, hash, duplicate: false };
 }
@@ -2246,9 +2206,23 @@ async function deleteUploadedCsv(projId, id) {
   const all = loadCsvUploads();
   if (all[projId]) {
     delete all[projId][id];
-    // Для Hupp пустой объект должен уйти в облако как явное удаление.
-    if (!Object.keys(all[projId]).length && projId !== 'hupp') delete all[projId];
-    await saveCsvUploads(all);
+    if (!Object.keys(all[projId]).length) delete all[projId];
+    localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(all));
+  }
+  if (!HUPP_CSV_CLOUD_SYNC) return;
+  try {
+    await jbSaveRecord(raw => {
+      const rest = raw.filter(p => p && p.id !== '_csv_uploads');
+      const entry = raw.find(p => p?.id === '_csv_uploads');
+      const uploads = entry?.uploads ? JSON.parse(JSON.stringify(entry.uploads)) : {};
+      if (uploads[projId]) {
+        delete uploads[projId][id];
+        if (!Object.keys(uploads[projId]).length) delete uploads[projId];
+      }
+      return [...rest, { id: '_csv_uploads', uploads, updatedAt: new Date().toISOString() }];
+    });
+  } catch (e) {
+    console.warn('CSV delete cloud sync failed:', e.message || e);
   }
 }
 
@@ -3308,32 +3282,32 @@ async function fetchMultiSourcesMonthly(sourceDefs, monthly) {
 async function ensureHuppStartCsvSeed() {
   const p = projects.find(x => x.id === 'hupp');
   if (!p || !isHuppCsvOnly(p)) return false;
+  const uploads = getProjectCsvUploads('hupp') || {};
+  const entries = Object.entries(uploads);
+  const hasReal = entries.some(([, u]) => !isHuppSeedUpload(u));
+  if (hasReal) {
+    await pruneHuppSeedUploads();
+    try { localStorage.setItem(HUPP_START_SEED_FLAG, '2'); } catch (_) {}
+    return false;
+  }
+  if (entries.length) {
+    try { localStorage.setItem(HUPP_START_SEED_FLAG, '2'); } catch (_) {}
+    return false;
+  }
+  const flag = (() => { try { return localStorage.getItem(HUPP_START_SEED_FLAG); } catch (_) { return null; } })();
+  if (flag === '2') return false;
   try {
-    const text = await fetchWithFallback(HUPP_START_CSV_URL);
+    const text = await Promise.race([
+      fetchWithFallback(HUPP_START_CSV_URL),
+      sleep(5000).then(() => { throw new Error('hupp start csv timeout'); }),
+    ]);
     if (!text || text.trim().length < 20) throw new Error('empty start csv');
-    const uploads = getProjectCsvUploads('hupp') || {};
-    const current = getLatestHuppUpload(uploads);
-    if (current) {
-      // Одноразовая миграция: вернуть известные стартовые дни, которые были
-      // потеряны старой логикой replace. Реальный upload перекрывает baseline.
-      const baselineRows = directSpendRowsFromUploadText(text);
-      const currentRows = current.rows?.length
-        ? deserializeUploadRows(current.rows)
-        : directSpendRowsFromUploadText(current.text || '');
-      const merged = mergeRowsByDate(baselineRows, currentRows);
-      const needsMigration = !uploads[HUPP_UPLOAD_ID] || merged.length > currentRows.length;
-      if (needsMigration) {
-        await saveUploadedCsv(
-          'hupp',
-          current.label || 'CSV upload',
-          current.fileName || 'partners-m.csv',
-          directSpendRowsToCsvText(merged),
-        );
-      }
-      try { localStorage.setItem(HUPP_START_SEED_FLAG, '2'); } catch (_) {}
-      return needsMigration;
+    const saved = await saveUploadedCsv('hupp', 'CSV upload', 'partners-m-2026-07-16.csv', text);
+    const all = loadCsvUploads();
+    if (all.hupp?.[saved.id]) {
+      all.hupp[saved.id].seed = true;
+      await saveCsvUploads(all, { awaitCloud: false });
     }
-    await saveUploadedCsv('hupp', 'CSV upload', 'partners-m-2026-07-16.csv', text);
     try { localStorage.setItem(HUPP_START_SEED_FLAG, '2'); } catch (_) {}
     return true;
   } catch (e) {
@@ -3353,23 +3327,60 @@ async function fetchMetrikaDailyRows() {
 }
 
 function collectHuppDirectRows(proj) {
-  const latest = getLatestHuppUpload(getProjectCsvUploads(proj?.id || 'hupp'));
-  if (!latest) return [];
+  const uploads = getProjectCsvUploads(proj?.id || 'hupp');
+  const entries = Object.values(uploads || {}).filter(Boolean);
+  const real = entries.filter(u => !isHuppSeedUpload(u));
+  const use = real.length ? real : entries;
   const fromUploads = [];
-  if (latest.text) {
-    directSpendRowsFromUploadText(latest.text).forEach(r => fromUploads.push(r));
-  } else if (latest.rows?.length) {
-    deserializeUploadRows(latest.rows).forEach(r => {
-        fromUploads.push({
-          date: r.date,
-          dateStr: r.dateStr || (r.date ? fmtDateStr(r.date) : ''),
-          spend: r.spend || 0,
-          clicks: r.clicks || 0,
-          impressions: r.impressions || 0,
-        });
+  use.forEach(u => {
+    if (u.text) {
+      directSpendRowsFromUploadText(u.text).forEach(r => fromUploads.push(r));
+      return;
+    }
+    if (!u.rows?.length) return;
+    deserializeUploadRows(u.rows).forEach(r => {
+      fromUploads.push({
+        date: r.date,
+        dateStr: r.dateStr || (r.date ? fmtDateStr(r.date) : ''),
+        spend: r.spend || 0,
+        clicks: r.clicks || 0,
+        impressions: r.impressions || 0,
+      });
     });
-  }
+  });
   return aggregateRowsByDate(fromUploads);
+}
+
+function isHuppSeedUpload(u) {
+  if (!u) return false;
+  if (u.seed) return true;
+  return /partners-m-2026-07-16|hupp-start\.csv/i.test(String(u.fileName || ''));
+}
+
+async function pruneHuppSeedUploads() {
+  const all = loadCsvUploads();
+  const files = { ...(all.hupp || {}) };
+  const ids = Object.keys(files).filter(id => isHuppSeedUpload(files[id]));
+  if (!ids.length) return false;
+  ids.forEach(id => delete files[id]);
+  all.hupp = files;
+  localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(all));
+  if (!HUPP_CSV_CLOUD_SYNC) return true;
+  try {
+    await jbSaveRecord(raw => {
+      const rest = raw.filter(p => p && p.id !== '_csv_uploads');
+      const entry = raw.find(p => p?.id === '_csv_uploads');
+      const uploads = entry?.uploads ? JSON.parse(JSON.stringify(entry.uploads)) : {};
+      if (uploads.hupp) {
+        ids.forEach(id => delete uploads.hupp[id]);
+        if (!Object.keys(uploads.hupp).length) delete uploads.hupp;
+      }
+      return [...rest, { id: '_csv_uploads', uploads, updatedAt: new Date().toISOString() }];
+    });
+  } catch (e) {
+    console.warn('Hupp seed cloud prune failed:', e.message || e);
+  }
+  return true;
 }
 
 async function fetchProject(proj) {
@@ -3778,16 +3789,18 @@ function isHuppCsvOnly(proj) {
 }
 
 function getHuppCsvUploadMeta(proj) {
-  const map = getProjectCsvUploads(proj?.id || 'hupp');
-  const list = Object.values(map || {});
-  if (!list.length) return null;
-  const latest = [...list].sort((a, b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')))[0];
-  const rows = list.reduce((n, u) => n + (u.rows?.length || 0), 0);
+  const uploads = getProjectCsvUploads(proj?.id || 'hupp');
+  const entries = Object.entries(uploads || {})
+    .sort((a, b) => String(b[1]?.uploadedAt || '').localeCompare(String(a[1]?.uploadedAt || '')));
+  if (!entries.length) return null;
+  const latest = entries[0][1];
+  const names = entries.map(([, u]) => u.fileName || u.label || '').filter(Boolean);
+  const mergedDays = collectHuppDirectRows(proj).length;
   return {
     uploadedAt: latest?.uploadedAt || null,
-    fileName: latest?.fileName || '',
-    fileCount: list.length,
-    rowCount: rows,
+    fileName: names.length > 1 ? `${names[0]} (+${names.length - 1})` : (names[0] || ''),
+    fileCount: entries.length,
+    rowCount: mergedDays,
   };
 }
 

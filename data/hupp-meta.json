@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-07-21T15:18:06+00:00",
+  "generated_at": "2026-07-22T03:50:00+00:00",
   "project": "hupp",
   "anchor": "2026-07-01",
-  "until": "2026-07-21",
+  "until": "2026-07-22",
   "metric_map": {
     "trials": "reach_pay",
     "fb": "view_pay",
@@ -64,17 +64,17 @@
     "metrika": "counter_110726695"
   },
   "errors": [],
-  "days": 21,
+  "days": 22,
   "totals": {
     "spend": 0.0,
-    "installs": 1748.0,
-    "trials": 102.0,
-    "sold": 34.0,
-    "fb": 271.0,
-    "purchase": 21.0,
-    "contact_info": 35.0,
-    "form_submit": 58.0,
-    "contact_sent": 34.0,
+    "installs": 1861.0,
+    "trials": 113.0,
+    "sold": 37.0,
+    "fb": 292.0,
+    "purchase": 24.0,
+    "contact_info": 38.0,
+    "form_submit": 62.0,
+    "contact_sent": 37.0,
     "clicks": 0.0,
     "impressions": 0.0
   },
