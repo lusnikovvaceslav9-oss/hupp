@@ -1,9 +1,11 @@
 {
-  "generated_at": "2026-07-22T03:50:00+00:00",
+  "generated_at": "2026-07-22T06:26:29+00:00",
   "project": "hupp",
   "anchor": "2026-07-01",
   "until": "2026-07-22",
+  "window_start": "2026-07-06",
   "metric_map": {
+    "installs": "metrika_visits",
     "trials": "reach_pay",
     "fb": "view_pay",
     "sold": "pay_submit",
@@ -11,10 +13,7 @@
     "contact_info": "contact_info",
     "form_submit": "form_submit",
     "contact_sent": "contact_sent",
-    "installs": "metrika_visits",
-    "spend": "direct_csv_upload",
-    "clicks": "direct_csv_upload",
-    "impressions": "direct_csv_upload"
+    "spend": "direct_cost_no_vat"
   },
   "goals": [
     {
@@ -60,24 +59,27 @@
       "csv": "contact_sent"
     }
   ],
-  "sources": {
-    "metrika": "counter_110726695"
-  },
-  "errors": [],
+  "sources": {},
+  "errors": [
+    "direct: DIRECT_OAUTH_TOKEN missing",
+    "metrika: METRIKA_OAUTH_TOKEN missing"
+  ],
   "days": 22,
   "totals": {
     "spend": 0.0,
-    "installs": 1861.0,
-    "trials": 113.0,
-    "sold": 37.0,
-    "fb": 292.0,
-    "purchase": 24.0,
-    "contact_info": 38.0,
-    "form_submit": 62.0,
-    "contact_sent": 37.0,
-    "clicks": 0.0,
-    "impressions": 0.0
+    "visits": 1861,
+    "reach_pay": 113,
+    "view_pay": 292,
+    "pay_submit": 37,
+    "purchase": 24,
+    "contact_info": 38,
+    "form_submit": 62,
+    "contact_sent": 37
   },
-  "metrika_counter_id": "110726695",
-  "direct_source": "csv_upload"
+  "reconcile_diff": {
+    "reach_pay_old": 113,
+    "reach_pay_new": 113,
+    "delta": 0
+  },
+  "metrika_counter_id": "110726695"
 }
