@@ -1,0 +1,21 @@
+# Netlify (Git): publish = собранная папка netlify-upload/
+# Ручной drag-and-drop: scripts/pack-netlify.sh → netlify-upload/
+
+[build]
+  publish = "netlify-upload"
+  command = "bash scripts/pack-netlify.sh"
+
+[[redirects]]
+  from = "/"
+  to = "/elixir.html"
+  status = 302
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=60, must-revalidate"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
