@@ -3939,6 +3939,10 @@ function plantoFeedHealth() {
   return { until, lastIso, totalRows: rows.length, julyRows, ok, todayIso, staleVsToday };
 }
 
+function showCsvTechLabels() {
+  return isAdmin();
+}
+
 function renderPlantoBreakdownCard(proj, rows) {
   if (isPlantoAutoFeed(proj)) {
     const csvMeta = getHuppCsvUploadMeta(proj);
@@ -3948,7 +3952,7 @@ function renderPlantoBreakdownCard(proj, rows) {
     const todayInfo = getPlantoTodayRow(rows?.length ? rows : getPlantoDailyRows());
     const todayLabel = todayInfo?.row
       ? (todayInfo.isToday ? `сегодня · ${todayInfo.row.dateStr}` : `последний день · ${todayInfo.row.dateStr}`)
-      : 'нет данных — загрузите CSV';
+      : (showCsvTechLabels() ? 'нет данных — загрузите CSV' : 'нет данных за сегодня');
     const chips = [
       { key: 'visits', soft: true },
       { key: 'reach_pay' },
@@ -3960,13 +3964,24 @@ function renderPlantoBreakdownCard(proj, rows) {
       const chip = `<span class="feed-chip${c.soft ? ' soft' : ''}">${c.key}</span>`;
       return i ? `<span class="feed-chip-arrow">→</span>${chip}` : chip;
     }).join('');
-    return `<div class="analytics-card planto-breakdown-card feed-status-card">
+    if (showCsvTechLabels()) {
+      return `<div class="analytics-card planto-breakdown-card feed-status-card">
       <div class="feed-status-top">
         <div class="analytics-card-title" style="margin:0">CSV стата <span class="feed-badge">${csvMeta ? 'live' : 'empty'}</span></div>
         <div class="feed-status-meta">${updated ? `загружено <strong>${escHtml(updated)}</strong>` : 'ожидает загрузки CSV'}</div>
       </div>
       <div class="feed-chip-row">${chipHtml}</div>
       <div class="feed-status-meta">Визиты и цели — <strong>${useSameOriginFeed() ? 'local data/' : 'elixir-dashboard'}</strong> · spend/клики — <strong>Директ CSV</strong>${csvMeta?.fileName ? ` · ${escHtml(csvMeta.fileName)}` : ''} · ${escHtml(todayLabel)}${lastPlantoFeedRefresh?.message ? `<br><span style="opacity:.85">${escHtml(lastPlantoFeedRefresh.message)}</span>` : ''}${lastCsvCloudSync?.message ? `<br><span style="opacity:.85">${escHtml(lastCsvCloudSync.message)}</span>` : ''}</div>
+    </div>`;
+    }
+    const metrikaSrc = useSameOriginFeed() ? 'Метрика' : 'Метрика · авто';
+    return `<div class="analytics-card planto-breakdown-card feed-status-card">
+      <div class="feed-status-top">
+        <div class="analytics-card-title" style="margin:0">Воронка <span class="feed-badge">${csvMeta || plantoMetaCache ? 'live' : 'empty'}</span></div>
+        <div class="feed-status-meta">${escHtml(todayLabel)}</div>
+      </div>
+      <div class="feed-chip-row">${chipHtml}</div>
+      <div class="feed-status-meta">${escHtml(metrikaSrc)} · расход из Директа</div>
     </div>`;
   }
   const sel = getPlantoView(proj.id);
@@ -4218,12 +4233,14 @@ function renderPlantoTodayBlock(proj, allRows) {
       '●',
       'Дневная стата',
       isHuppCsvOnly(proj)
-        ? 'Срез за текущий день — появится после загрузки CSV.'
+        ? (showCsvTechLabels() ? 'Срез за текущий день — появится после загрузки CSV.' : 'Срез за текущий день — данные обновляются автоматически.')
         : 'Срез за текущий день — данные Яндекс Метрики.',
       'live',
       plantoKpiCell('Нет данных', '—', {
         pending: true,
-        sub: isHuppCsvOnly(proj) ? 'загрузите CSV в Admin' : 'дождитесь обновления feed',
+        sub: isHuppCsvOnly(proj)
+          ? (showCsvTechLabels() ? 'загрузите CSV в Admin' : 'данные скоро появятся')
+          : 'дождитесь обновления feed',
         wide: true,
       }),
       { live: true },
@@ -4278,11 +4295,13 @@ function renderPlantoTodayBlock(proj, allRows) {
   ].join('');
 
   const metrikaSrc = useSameOriginFeed()
-    ? 'Метрика (local data/)'
-    : 'Метрика ← elixir-dashboard';
+    ? (showCsvTechLabels() ? 'Метрика (local data/)' : 'Метрика')
+    : (showCsvTechLabels() ? 'Метрика ← elixir-dashboard' : 'Метрика · авто');
   const footer = `<div class="planto-live-note">${isHuppCsvOnly(proj)
-    ? `Live · ${metrikaSrc} · spend — Директ CSV${updated ? ` · CSV: ${escHtml(updated)}` : ''}.`
-    : `Метрика · обновление feed ~каждый час${updated ? ` · последнее: ${escHtml(updated)}` : ''}.`}</div>`;
+    ? (showCsvTechLabels()
+      ? `Live · ${metrikaSrc} · spend — Директ CSV${updated ? ` · CSV: ${escHtml(updated)}` : ''}.`
+      : `Live · ${metrikaSrc} · расход из Директа.`)
+    : `Метрика · обновление feed ~каждый час${updated && showCsvTechLabels() ? ` · последнее: ${escHtml(updated)}` : ''}.`}</div>`;
 
   return plantoBlock(
     'today',
@@ -4364,7 +4383,7 @@ function renderPlantoMetricBlocks(proj, rows, monthKey) {
     plantoKpiCell('Cost / Reach', tr ? fmtMoney(sp / tr, cur) : '—', { sub: 'spend ÷ reach_pay' }),
     plantoKpiCell('Cost / Visit', ins ? fmtMoney(sp / ins, cur) : '—', { sub: 'CPV' }),
     plantoKpiCell('CPC', clicks ? fmtMoney(sp / clicks, cur) : '—', {
-      sub: clicks ? `${fmtInt(clicks)} кликов` : 'нет кликов в CSV',
+      sub: clicks ? `${fmtInt(clicks)} кликов` : (showCsvTechLabels() ? 'нет кликов в CSV' : 'нет кликов'),
     }),
   ].join('') : '';
 
@@ -6285,9 +6304,16 @@ function renderProjectDetail(projId) {
     </div>`;
   }
 
+  const tableSrcLabel = (isPlanto && isHuppCsvOnly(p) && singleSrc?.label && showCsvTechLabels())
+    ? ` · ${escHtml(singleSrc.label)}`
+    : '';
+  const tableUploadStamp = (isPlanto && isHuppCsvOnly(p) && showCsvTechLabels() && getHuppCsvUploadMeta(p)?.uploadedAt)
+    ? ` <span class="feed-badge">csv</span> <span class="feed-stamp">· загружено ${escHtml(new Date(getHuppCsvUploadMeta(p).uploadedAt).toLocaleString('ru-RU'))}</span>`
+    : '';
+
   html += `<div class="table-card">
     <div class="table-header">
-      <span class="card-title">По дням${isHuppCsvOnly(p) ? ` · с ${HUPP_DAILY_FROM_DAY}-го` : ''} — ${rows.length} строк${currentMonth ? ' · '+formatMonthKey(currentMonth) : ''}${plantoViewLabel ? ' · ' + escHtml(plantoViewLabel) : ''}${singleSrc?.label ? ' · ' + escHtml(singleSrc.label) : ''}${isPlanto && isHuppCsvOnly(p) && getHuppCsvUploadMeta(p)?.uploadedAt ? ' <span class="feed-badge">csv</span>' : ''}${isPlanto && isHuppCsvOnly(p) && getHuppCsvUploadMeta(p)?.uploadedAt ? ' <span class="feed-stamp">· загружено ' + escHtml(new Date(getHuppCsvUploadMeta(p).uploadedAt).toLocaleString('ru-RU')) + '</span>' : ''}</span>
+      <span class="card-title">По дням${isHuppCsvOnly(p) ? ` · с ${HUPP_DAILY_FROM_DAY}-го` : ''} — ${rows.length} строк${currentMonth ? ' · '+formatMonthKey(currentMonth) : ''}${plantoViewLabel ? ' · ' + escHtml(plantoViewLabel) : ''}${tableSrcLabel}${tableUploadStamp}</span>
     </div>
     ${renderDailyTableHtml(p, rows, tbl)}
   </div>`;
