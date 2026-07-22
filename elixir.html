@@ -2037,6 +2037,31 @@ async function saveCsvUploads(all, { awaitCloud = false, timeoutMs = 15000 } = {
   }
 }
 
+/** Принудительно заливает локальные CSV в JSONBin (как на основном дашборде). */
+async function forceSyncCsvToCloud(btn) {
+  if (!isAdmin()) return;
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Синхронизация…'; }
+  try {
+    const local = loadCsvUploads();
+    const merged = await Promise.race([
+      jbSaveCsvUploads(local),
+      sleep(30000).then(() => { throw new Error('таймаут 30с (проверь интернет)'); }),
+    ]);
+    localStorage.setItem(CSV_UPLOAD_KEY, JSON.stringify(merged));
+    const huppCnt = Object.keys(merged?.hupp || {}).length;
+    if (view && view !== 'overview') {
+      try { await applyUploadedCsvToCache(view); } catch (_) {}
+    }
+    await loadAll();
+    alert(`Готово ✓ В облаке ${huppCnt} файлов Hupp Direct. На других устройствах нажми «Обновить».`);
+  } catch (e) {
+    alert(`Не удалось синхронизировать: ${e.message || e}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
 function getProjectCsvUploads(projId) {
   const all = loadCsvUploads();
   return all[projId] || {};
@@ -2501,6 +2526,9 @@ function renderCsvUploadCard(proj) {
         <div class="csv-upload-title">Загрузить CSV / Excel</div>
         <div class="csv-upload-hint">${hint} Можно перетащить файл сюда.</div>
       </div>
+      <button type="button" class="btn-csv-sync" onclick="forceSyncCsvToCloud(this)"
+        title="Залить локальные CSV в облако — увидят Netlify и основной дашборд"
+        style="white-space:nowrap;padding:8px 12px;border-radius:8px;border:1px solid var(--border-strong);background:var(--matter);color:#fff;font-size:12px;font-weight:600;cursor:pointer">☁ В облако</button>
     </div>
     <div class="csv-upload-row">
       <select id="csv-upload-label-${proj.id}" onchange="onCsvUploadLabelChange('${proj.id}')">

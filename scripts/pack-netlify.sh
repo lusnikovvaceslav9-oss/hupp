@@ -67,16 +67,16 @@ Admin: пароль в elixir.html (ADMIN_PW) — смени перед публ
 Секреты (токены) сюда НЕ кладутся и на Netlify не нужны.
 EOF
 
-# Копия на рабочий стол для удобства
-rm -rf "$DESKTOP_COPY"
-cp -R "$OUT" "$DESKTOP_COPY"
-
-# Zip на рабочий стол
-ZIP="${HOME}/Desktop/hupp-netlify.zip"
-rm -f "$ZIP"
-( cd "$(dirname "$OUT")" && zip -r -q "$ZIP" "$(basename "$OUT")" )
+# Копия на рабочий стол — только локально (на Netlify CI папки Desktop нет)
+if [[ -d "${HOME}/Desktop" ]]; then
+  rm -rf "$DESKTOP_COPY"
+  cp -R "$OUT" "$DESKTOP_COPY"
+  ZIP="${HOME}/Desktop/hupp-netlify.zip"
+  rm -f "$ZIP"
+  ( cd "$(dirname "$OUT")" && zip -r -q "$ZIP" "$(basename "$OUT")" )
+  echo "OK: $DESKTOP_COPY"
+  echo "OK: $ZIP"
+fi
 
 echo "OK: $OUT"
-echo "OK: $DESKTOP_COPY"
-echo "OK: $ZIP"
-du -sh "$OUT" "$DESKTOP_COPY" "$ZIP"
+du -sh "$OUT"
