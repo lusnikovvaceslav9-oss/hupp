@@ -3872,13 +3872,17 @@ function rowsHaveSpend(rows) {
   return !!(rows && rows.some(r => (Number(r.spend) || 0) > 0));
 }
 
+function alwaysShowSpend(proj) {
+  return isHuppCsvOnly(proj) || proj?.id === 'izdaniya' || proj?.id === 'hupp';
+}
+
 function sumPurchase(rows) {
   return sum(rows, 'purchase') || sum(rows, 'purchases');
 }
 
-function getPlantoMetricKeys(view, rows) {
+function getPlantoMetricKeys(view, rows, proj) {
   const keys = [...(PLANTO_VIEWS[view]?.keys || PLANTO_VIEWS.summary.keys)];
-  if (!rowsHaveSpend(rows)) return keys;
+  if (!rowsHaveSpend(rows) && !alwaysShowSpend(proj)) return keys;
   const costByView = {
     summary: ['spend', 'cost_install', 'cost_trial', 'cost_sold', 'cost_purchase', 'cpc'],
     installs: ['spend', 'cost_install', 'cpc'],
@@ -3892,7 +3896,7 @@ function getPlantoMetricKeys(view, rows) {
 }
 
 function getPlantoOverviewDailyMetrics(proj) {
-  const info = getPlantoTodayRow(getPlantoDailyRows());
+  const info = getPlantoTodayRow(getPlantoDailyRows(proj));
   if (!info?.row) {
     return {
       note: 'Нет дневных данных — дождитесь обновления feed',
@@ -3913,9 +3917,11 @@ function getPlantoOverviewDailyMetrics(proj) {
     ? 'Сегодня · обновление ~каждый час · Яндекс Метрика'
     : `Последний день · ${dateLabel}`;
 
+  const spend = Number(r.spend) || 0;
   return {
     note,
     metrics: [
+      { key: 'today_spend', label: 'Spend', value: fmtMoney(spend, proj?.currency || '₽'), live: true, sub: 'Директ' },
       { key: 'today_installs', label: 'Visits', value: fmtInt(installs), live: true, sub: 'визиты' },
       { key: 'today_trials', label: 'Reach pay', value: fmtInt(trials), live: true, sub: 'клик «Получить/Оплатить»' },
       { key: 'today_bills', label: 'View pay', value: fmtInt(bills), live: true, sub: 'форма на экране' },
@@ -3935,8 +3941,9 @@ function switchPlantoView(mode) {
   renderContent();
 }
 
-function getPlantoDailyRows() {
-  const data = cache.hupp || cache.planto || cache[view];
+function getPlantoDailyRows(proj) {
+  const id = proj?.id || view;
+  const data = cache[id] || cache.hupp || cache.planto;
   if (!data || data === 'loading' || data === null) return [];
   return getAllRowsFromCache(data) || [];
 }
@@ -4284,7 +4291,7 @@ function renderPlantoTodayBlock(proj, allRows) {
     : (plantoMetaCache?.generated_at ? new Date(plantoMetaCache.generated_at).toLocaleString('ru-RU') : '');
   const dateLabel = r.dateStr || fmtDateStr(r.date);
 
-  const costCells = spend > 0 ? [
+  const costCells = [
     plantoKpiCell('Cost / Purchase', purchase ? fmtMoney(spend / purchase, cur) : '—', {
       accent: true,
       primary: true,
@@ -4298,10 +4305,10 @@ function renderPlantoTodayBlock(proj, allRows) {
       sub: 'CPV · spend ÷ visits',
     }),
     ...(clicks > 0 ? [plantoKpiCell('CPC', fmtMoney(spend / clicks, cur), { sub: `${fmtInt(clicks)} кликов` })] : []),
-  ] : [];
+  ];
 
   const grid = [
-    ...(spend > 0 ? [plantoKpiCell('Spend', fmtMoney(spend, cur), { sub: 'Директ' })] : []),
+    plantoKpiCell('Spend', fmtMoney(spend, cur), { sub: 'Директ' }),
     plantoKpiCell('Visits', fmtInt(visits), { primary: true, sub: dateLabel }),
     plantoKpiCell('Reach pay', fmtInt(reach), { sub: crReach != null ? `CR ${fmtPct(crReach)} · клик к форме` : 'клик «Получить/Оплатить»' }),
     plantoKpiCell('View pay', fmtInt(viewPay), { sub: 'форма оплаты на экране' }),
@@ -4389,7 +4396,7 @@ function renderPlantoMetricBlocks(proj, rows, monthKey) {
     plantoKpiCell('Contact sent', fmtInt(contactSent), { accent: true, sub: 'отправил контакты' }),
   ].join('');
 
-  const costBlock = sp > 0 ? [
+  const costBlock = [
     plantoKpiCell('Spend', fmtMoney(sp, cur), { primary: true, sub: 'Директ за период' }),
     plantoKpiCell('Cost / Purchase', purchase ? fmtMoney(sp / purchase, cur) : '—', {
       accent: true,
@@ -4405,14 +4412,14 @@ function renderPlantoMetricBlocks(proj, rows, monthKey) {
     plantoKpiCell('CPC', clicks ? fmtMoney(sp / clicks, cur) : '—', {
       sub: clicks ? `${fmtInt(clicks)} кликов` : (showCsvTechLabels() ? 'нет кликов в CSV' : 'нет кликов'),
     }),
-  ].join('') : '';
+  ].join('');
 
   // Live-блок рендерится отдельно наверху страницы.
   return `<div class="planto-blocks">
     ${plantoBlock('acquisition', '1', 'Трафик', 'Визиты и клик «Получить/Оплатить» — вход в воронку.', 'Metrika', trafficBlock)}
     ${plantoBlock('trials', '2', 'Воронка оплаты', 'reach_pay → view_pay → pay_submit (ЮKassa) → purchase (цель рекламы)', 'Metrika', trialsBlock)}
-    ${sp > 0 ? plantoBlock('costs', '3', 'Цена от spend', 'Spend ÷ этап. Главная метрика оптимизации — Cost / Purchase.', 'Директ + Метрика', costBlock) : ''}
-    ${plantoBlock('unit', sp > 0 ? '4' : '3', 'Контакты и формы', 'Автоцели Метрики.', 'Metrika', unitBlock)}
+    ${plantoBlock('costs', '3', 'Цена от spend', 'Spend ÷ этап. Главная метрика оптимизации — Cost / Purchase.', 'Директ + Метрика', costBlock)}
+    ${plantoBlock('unit', '4', 'Контакты и формы', 'Автоцели Метрики.', 'Metrika', unitBlock)}
   </div>`;
 }
 
@@ -4637,7 +4644,7 @@ function getMetrics(proj, rows) {
   const p = withEffectiveType(proj, rows);
   let config = getProjectMetricsConfig(p, rows).filter(m => m.enabled !== false);
   if (p.type === 'planto') {
-    const allowed = new Set(getPlantoMetricKeys(getPlantoView(proj.id), rows));
+    const allowed = new Set(getPlantoMetricKeys(getPlantoView(proj.id), rows, proj));
     config = config.filter(m => allowed.has(m.key));
   }
   return config.map(m => ({
@@ -5456,7 +5463,7 @@ function getChartDatasets(proj, rows) {
   const L = (key, fb) => getMetricLabel(p, key, fb);
   if (p.type === 'planto') {
     const view = getPlantoView(proj.id);
-    const keys = getPlantoMetricKeys(view, rows);
+    const keys = getPlantoMetricKeys(view, rows, proj);
     const colors = ['#0a0a0a', '#22C55E', '#F59E0B', '#EC4899', '#06B6D4', '#888888', '#ff5a00', '#6366F1'];
     return keys.map((key, i) => ({
       label: L(key, PLANTO_VIEWS[view]?.label || key),
