@@ -111,8 +111,10 @@ body{
 .logo-mark img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.06)}
 .brand-name{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text);letter-spacing:0.14em;text-transform:uppercase}
 .brand-name .brand-accent{color:var(--dox-orange)}
-.hupp-solo-badge{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 6px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text);flex-shrink:0}
-.hupp-solo-badge img{width:22px;height:22px;border-radius:6px;object-fit:cover;display:block}
+.hupp-solo-badge{display:none}
+.proj-switch{display:flex;align-items:center;gap:3px;height:36px;padding:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface);flex-shrink:0}
+.proj-switch-btn{height:100%;padding:0 12px;border:0;border-radius:8px;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer}
+.proj-switch-btn.active{background:#0a0a0a;color:#fff}
 .proj-picker-item-icon{width:34px;height:34px;border-radius:9px;background:#0a0a0a;border:1px solid rgba(255,90,0,0.35);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;color:#fff;overflow:hidden;padding:0}
 .proj-picker-item-icon img{width:100%;height:100%;object-fit:cover;display:block}
 .tile-icon-wrap.mascot{padding:0;overflow:hidden;background:#0a0a0a;border-color:rgba(255,90,0,0.35)}
@@ -809,16 +811,12 @@ thead th{color:rgba(0,0,0,0.58)!important;font-weight:700!important}
 <div id="main">
   <div class="topbar">
     <div class="topbar-inner">
-      <div class="topbar-brand" onclick="switchView('hupp')" style="cursor:pointer" title="Hupp">
+      <div class="topbar-brand" onclick="switchView('overview')" style="cursor:pointer" title="Все проекты">
         <span class="logo-mark"><img src="assets/hupp-mascot.jpg" alt="Hupp" width="36" height="36"></span>
         <span class="brand-name">HU<span class="brand-accent">PP</span></span>
       </div>
       <div class="proj-picker" id="proj-picker" style="display:none" aria-hidden="true"></div>
-      <div class="hupp-solo-badge" id="hupp-solo-badge">
-        <img src="assets/hupp-mascot.jpg" alt="" width="22" height="22">
-        <span>Hupp</span>
-        <span class="status-badge run">Пролив</span>
-      </div>
+      <div class="proj-switch" id="proj-switch" role="tablist"></div>
       <div class="topbar-divider"></div>
       <div class="page-title-wrap">
         <h1 class="page-title" id="page-title">Hupp</h1>
@@ -5685,10 +5683,25 @@ function renderTopbar() {
   if (addBtn) addBtn.style.display = 'none';
 }
 
+function renderProjSwitch() {
+  const el = document.getElementById('proj-switch');
+  if (!el) return;
+  const items = [{ id: 'overview', name: 'Все' }, ...projects.map(p => ({ id: p.id, name: p.name }))];
+  el.innerHTML = items.map(it =>
+    `<button type="button" class="proj-switch-btn${view === it.id ? ' active' : ''}" data-view="${escHtml(it.id)}" onclick="switchView('${escHtml(it.id)}')">${escHtml(it.name)}</button>`
+  ).join('');
+}
+
 function updateProjPickerTrigger() {
+  renderProjSwitch();
   const pageTitle = document.getElementById('page-title');
-  const p = projects.find(x => x.id === 'hupp') || projects[0];
-  if (pageTitle && p) {
+  if (!pageTitle) return;
+  if (view === 'overview') {
+    pageTitle.textContent = 'Все проекты';
+    return;
+  }
+  const p = projects.find(x => x.id === view) || projects[0];
+  if (p) {
     pageTitle.innerHTML = `${escHtml(p.name)} <span class="page-status">${renderStatusBadge(p)}</span>`;
   }
 }
@@ -6468,9 +6481,8 @@ function renderAdminPanel(proj) {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function switchView(v) {
-  // Single-project dashboard: always Hupp.
-  view = (v === 'overview' || !v) ? 'hupp' : v;
-  if (view !== 'hupp') view = 'hupp';
+  const allowed = new Set(['overview', ...projects.map(p => p.id)]);
+  view = allowed.has(v) ? v : 'overview';
   currentMonth = null;
   destroyDetailCharts();
   if (overviewChartInstance) { overviewChartInstance.destroy(); overviewChartInstance = null; }
@@ -6490,7 +6502,8 @@ function switchMonth(m) {
 
 function renderContent() {
   renderTopbar();
-  renderProjectDetail('hupp');
+  if (view === 'overview') renderOverview();
+  else renderProjectDetail(view);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -7199,10 +7212,10 @@ renderTopbar();
 (async () => {
   await loadProjects();
   await hydrateCsvUploadsFromRemote();
-  view = 'hupp';
+  view = 'overview';
   renderTopbar();
   await loadAll();
-  switchView('hupp');
+  switchView('overview');
 })();
 </script>
 </body>
