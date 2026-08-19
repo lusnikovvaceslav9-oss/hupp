@@ -5,7 +5,8 @@
   "refresh_days": 14,
   "attribution_lag_days": 2,
   "currency": "RUB",
-  "direct_client_login": "",
+  "direct_client_login": "partners-m",
+  "direct_campaign_ids": ["712811375", "712860761"],
   "metrika_counter_id": "110726695",
   "goals": [
     {

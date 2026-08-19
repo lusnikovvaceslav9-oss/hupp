@@ -1127,7 +1127,12 @@ function rowsFromDayOnward(rows, fromDay = HUPP_DAILY_FROM_DAY) {
 const DEFAULT_PROJECTS = [
   { id: 'hupp', name: 'Hupp', icon: 'assets/hupp-mascot.jpg', currency: '₽', type: 'planto', status: 'run',
     urls: [], dataSource: 'csv' },
+  { id: 'izdaniya', name: 'Издания', icon: '📰', currency: '₽', type: 'planto', status: 'run',
+    urls: ['data/izdaniya-daily.csv'], dataSource: 'csv' },
 ];
+function dailyUrlFor(proj) {
+  return proj?.id === 'izdaniya' ? 'data/izdaniya-daily.csv' : PLANTO_DATA_URL;
+}
 
 const PROJECT_STATUSES = [
   { id: 'run',   label: 'Пролив' },
@@ -1471,6 +1476,20 @@ async function jbSave(arr) {
 
 function applyPlantoAutoSource(list) {
   return list.map(p => {
+    if (p.id === 'izdaniya') {
+      const clean = {
+        ...p,
+        id: 'izdaniya',
+        name: p.name || 'Издания',
+        type: 'planto',
+        urls: ['data/izdaniya-daily.csv'],
+        dataSource: 'csv',
+        sheetSources: [{ id: 'csv', url: 'upload://izdaniya', label: 'CSV upload' }],
+        monthlySheets: [],
+      };
+      delete clean.fbScraper;
+      return normalizeProject(clean);
+    }
     if (p.id !== 'hupp' && p.id !== 'planto') return p;
     const clean = {
       ...p,
@@ -2593,24 +2612,23 @@ function applyLocalCsvSources(list) {
 }
 
 function applyProjectDefaults(list) {
-  // Только Hupp — отдельный дашборд, без чужих проектов.
-  const hupp = DEFAULT_PROJECTS[0];
-  const existing = (list || []).find(p => p && (p.id === 'hupp' || p.id === 'planto'));
-  const merged = normalizeProject({
-    ...hupp,
-    ...(existing || {}),
-    id: 'hupp',
-    name: 'Hupp',
-    icon: hupp.icon,
+  const saved = list || [];
+  const byId = Object.fromEntries(saved.filter(p => p && p.id).map(p => [p.id, p]));
+  const merged = DEFAULT_PROJECTS.map(def => normalizeProject({
+    ...def,
+    ...(byId[def.id] || {}),
+    id: def.id,
+    name: def.name,
+    icon: def.icon,
     type: 'planto',
     currency: '₽',
-    status: (existing && existing.status) || 'run',
-    urls: [],
+    status: (byId[def.id] && byId[def.id].status) || def.status || 'run',
+    urls: def.urls || [],
     dataSource: 'csv',
-    sheetSources: [{ id: 'csv', url: 'upload://hupp', label: 'CSV upload' }],
+    sheetSources: [{ id: 'csv', url: `upload://${def.id}`, label: 'CSV upload' }],
     monthlySheets: [],
-  });
-  return applyLocalCsvSources(applyPlantoAutoSource([merged]));
+  }));
+  return applyLocalCsvSources(applyPlantoAutoSource(merged));
 }
 
 async function loadLocalCsvManifest(dir) {
@@ -3132,8 +3150,9 @@ async function refreshPlantoFeedRef() {
 }
 
 function resolvePlantoFeedUrl(localPath) {
-  if (useSameOriginFeed()) return localPath;
   const rel = String(localPath || '').replace(/^\//, '');
+  if (rel.includes('izdaniya')) return rel;
+  if (useSameOriginFeed()) return localPath;
   return `https://raw.githubusercontent.com/${PLANTO_GH_REPO}/${plantoFeedRef}/${rel}`;
 }
 
@@ -3344,9 +3363,9 @@ async function ensureHuppStartCsvSeed() {
   }
 }
 
-async function fetchMetrikaDailyRows() {
+async function fetchMetrikaDailyRows(proj) {
   try {
-    const text = await fetchWithFallback(PLANTO_DATA_URL);
+    const text = await fetchWithFallback(dailyUrlFor(proj));
     return parseSheet(text) || [];
   } catch (e) {
     console.warn('Metrika daily load failed:', e.message || e);
@@ -3419,9 +3438,9 @@ async function fetchProject(proj) {
 
   // Hupp: цели/визиты — только Метрика; spend/clicks — из CSV Директа.
   if (isHuppCsvOnly(proj)) {
-    const metrikaRows = await fetchMetrikaDailyRows();
+    const metrikaRows = await fetchMetrikaDailyRows(proj);
     let directRows = collectHuppDirectRows(proj);
-    if (!directRows.length) {
+    if (!directRows.length && proj?.id !== 'izdaniya') {
       try {
         const text = await fetchWithFallback(HUPP_START_CSV_URL);
         directRows = directSpendRowsFromUploadText(text);
@@ -3433,7 +3452,7 @@ async function fetchProject(proj) {
       sources: [{
         id: 'csv',
         label: 'Metrika + Direct',
-        url: PLANTO_DATA_URL,
+        url: dailyUrlFor(proj),
         rows,
         sheetColumns: [
           'date', 'spend', 'installs', 'trials', 'sold', 'fb', 'purchase',
@@ -3799,7 +3818,7 @@ const PLANTO_VIEWS = {
 
 function isPlantoAutoFeed(proj) {
   if (!proj) return false;
-  if (proj.id !== 'hupp' && proj.id !== 'planto') return false;
+  if (proj.id !== 'hupp' && proj.id !== 'planto' && proj.id !== 'izdaniya') return false;
   if (proj.dataSource === 'auto' || proj.dataSource === 'csv') return true;
   const urls = [
     ...(proj.urls || []),
@@ -3815,7 +3834,7 @@ function isPlantoAutoFeed(proj) {
 
 function isHuppCsvOnly(proj) {
   if (!proj) return false;
-  if (proj.id === 'hupp' || proj.id === 'planto') return true;
+  if (proj.id === 'hupp' || proj.id === 'planto' || proj.id === 'izdaniya') return true;
   return typeof HUPP_STANDALONE !== 'undefined' && HUPP_STANDALONE && proj.type === 'planto';
 }
 
@@ -3837,7 +3856,7 @@ function getHuppCsvUploadMeta(proj) {
 
 function isPlantoProject(proj, rows) {
   if (!proj) return false;
-  if (proj.id === 'hupp' || proj.id === 'planto') return true;
+  if (proj.id === 'hupp' || proj.id === 'planto' || proj.id === 'izdaniya') return true;
   if (proj.id === 'quadcode' || proj.id === 'streamfi') return false;
   return getEffectiveType(proj, rows) === 'planto';
 }

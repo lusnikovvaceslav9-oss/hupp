@@ -35,14 +35,23 @@ jobs:
           METRIKA_GOAL_ID_TERTIARY: ${{ secrets.METRIKA_GOAL_ID_TERTIARY }}
         run: python scripts/hupp-feed/__main__.py --work-dir .
 
+      - name: Run Izdaniya feed
+        working-directory: ${{ github.workspace }}
+        env:
+          DIRECT_OAUTH_TOKEN: ${{ secrets.DIRECT_OAUTH_TOKEN }}
+          DIRECT_CLIENT_LOGIN: partners-m
+          METRIKA_OAUTH_TOKEN: ${{ secrets.METRIKA_OAUTH_TOKEN }}
+        run: python scripts/hupp-feed/__main__.py --work-dir . --config config/izdaniya.json
+
       - name: Commit updated data
         run: |
           git config user.name "Hupp Feed Bot"
           git config user.email "feed-bot@users.noreply.github.com"
           echo "=== data after feed ==="
-          ls -la data/hupp-* || true
-          python3 -c "import json; m=json.load(open('data/hupp-meta.json')); print('until:', m.get('until'), 'days:', m.get('days'), 'errors:', m.get('errors'))"
-          git add data/hupp-daily.csv data/hupp-cohort.json data/hupp-meta.json
+          ls -la data/hupp-* data/izdaniya-* || true
+          python3 -c "import json; m=json.load(open('data/hupp-meta.json')); print('hupp until:', m.get('until'), 'days:', m.get('days'), 'errors:', m.get('errors'))"
+          python3 -c "import json; m=json.load(open('data/izdaniya-meta.json')); print('izdaniya until:', m.get('until'), 'days:', m.get('days'), 'errors:', m.get('errors'))"
+          git add data/hupp-daily.csv data/hupp-cohort.json data/hupp-meta.json data/izdaniya-daily.csv data/izdaniya-cohort.json data/izdaniya-meta.json
           git status --short
           if git diff --staged --quiet; then
             echo "::warning::No data changes — verify GitHub Secrets and API access"

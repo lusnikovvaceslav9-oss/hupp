@@ -1,0 +1,87 @@
+{
+  "generated_at": "2026-08-19T18:30:19+07:00",
+  "project": "hupp",
+  "anchor": "2026-07-23",
+  "until": "2026-08-19",
+  "window_start": "2026-08-03",
+  "metric_map": {
+    "installs": "metrika_visits",
+    "trials": "reach_pay",
+    "fb": "view_pay",
+    "sold": "pay_submit",
+    "purchase": "purchase",
+    "contact_info": "contact_info",
+    "form_submit": "form_submit",
+    "contact_sent": "contact_sent",
+    "spend": "direct_cost_no_vat"
+  },
+  "goals": [
+    {
+      "id": "599007245",
+      "key": "signup",
+      "label": "signup — регистрация / получение доступа",
+      "csv": "trials"
+    },
+    {
+      "id": "599007665",
+      "key": "checkout",
+      "label": "checkout — переход к оплате",
+      "csv": "sold"
+    },
+    {
+      "id": "599007827",
+      "key": "purchase",
+      "label": "purchase — успешная оплата 890 ₽",
+      "csv": "purchase"
+    },
+    {
+      "id": "598989422",
+      "key": "contact_info",
+      "label": "Автоцель: заполнил контактные данные",
+      "csv": "contact_info"
+    },
+    {
+      "id": "598989421",
+      "key": "form_submit",
+      "label": "Автоцель: отправка формы",
+      "csv": "form_submit"
+    },
+    {
+      "id": "598989423",
+      "key": "contact_sent",
+      "label": "Автоцель: отправил контактные данные",
+      "csv": "contact_sent"
+    }
+  ],
+  "sources": {
+    "visits": "metrika_stat",
+    "installs": "metrika_visits",
+    "signup": "metrika_signup_599007245",
+    "checkout": "metrika_checkout_599007665",
+    "purchase": "metrika_purchase_599007827",
+    "contact_info": "metrika_contact_info_598989422",
+    "form_submit": "metrika_form_submit_598989421",
+    "contact_sent": "metrika_contact_sent_598989423"
+  },
+  "errors": [
+    "direct: Direct HTTP 400: b'{\"error\":{\"request_id\":\"3203214274922109157\",\"error_string\":\"\\xd0\\x92\\xd0\\xb0\\xd1\\x88 \\xd0\\xbb\\xd0\\xbe\\xd0\\xb3\\xd0\\xb8\\xd0\\xbd \\xd0\\xbd\\xd0\\xb5 \\xd0\\xbf\\xd0\\xbe\\xd0\\xb4\\xd0\\xba\\xd0\\xbb\\xd1\\x8e\\xd1\\x87\\xd0\\xb5\\xd0\\xbd \\xd0\\xba \\xd0\\xaf\\xd0\\xbd\\xd0\\xb4\\xd0\\xb5\\xd0\\xba\\xd1\\x81.\\xd0\\x94\\xd0\\xb8\\xd1\\x80\\xd0\\xb5\\xd0\\xba\\xd1\\x82\\xd1\\x83\",\"error_detail\":\"\",\"error_code\":\"513\"}}'",
+    "direct_full: Direct HTTP 400: b'{\"error\":{\"request_id\":\"1686588760935797155\",\"error_detail\":\"\",\"error_code\":\"513\",\"error_string\":\"\\xd0\\x92\\xd0\\xb0\\xd1\\x88 \\xd0\\xbb\\xd0\\xbe\\xd0\\xb3\\xd0\\xb8\\xd0\\xbd \\xd0\\xbd\\xd0\\xb5 \\xd0\\xbf\\xd0\\xbe\\xd0\\xb4\\xd0\\xba\\xd0\\xbb\\xd1\\x8e\\xd1\\x87\\xd0\\xb5\\xd0\\xbd \\xd0\\xba \\xd0\\xaf\\xd0\\xbd\\xd0\\xb4\\xd0\\xb5\\xd0\\xba\\xd1\\x81.\\xd0\\x94\\xd0\\xb8\\xd1\\x80\\xd0\\xb5\\xd0\\xba\\xd1\\x82\\xd1\\x83\"}}'"
+  ],
+  "days": 28,
+  "totals": {
+    "spend": 0.0,
+    "visits": 77,
+    "signup": 1,
+    "checkout": 1,
+    "purchase": 1,
+    "contact_info": 0,
+    "form_submit": 1,
+    "contact_sent": 0
+  },
+  "reconcile_diff": {
+    "reach_pay_old": 1,
+    "reach_pay_new": 1,
+    "delta": 0
+  },
+  "metrika_counter_id": "111409801"
+}

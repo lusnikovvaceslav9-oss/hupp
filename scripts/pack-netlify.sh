@@ -17,6 +17,8 @@ cp "$ROOT/assets/hupp-mascot.jpg" "$OUT/assets/"
 cp "$ROOT/data/hupp-daily.csv" "$OUT/data/"
 cp "$ROOT/data/hupp-start.csv" "$OUT/data/"
 cp "$ROOT/data/hupp-meta.json" "$OUT/data/"
+cp "$ROOT/data/izdaniya-daily.csv" "$OUT/data/" 2>/dev/null || true
+cp "$ROOT/data/izdaniya-meta.json" "$OUT/data/" 2>/dev/null || true
 # cohort не используется в UI, но маленький — можно положить
 cp "$ROOT/data/hupp-cohort.json" "$OUT/data/" 2>/dev/null || true
 cp "$ROOT/data/examples/partners-m-2026-07-16.csv" "$OUT/data/examples/" 2>/dev/null || true

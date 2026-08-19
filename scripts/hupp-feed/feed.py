@@ -97,13 +97,14 @@ def run_feed(work_dir: Path, config_path: Path | None = None) -> int:
         d = date_since
         while d <= date_until:
             e = min(d + timedelta(days=chunk_days - 1), date_until)
-            part = fetch_direct_by_day(direct_token, client_login, d, e)
+            part = fetch_direct_by_day(direct_token, client_login, d, e, campaign_ids)
             out.update(part)
             d = e + timedelta(days=1)
         return out
 
     direct_token = secrets.get("DIRECT_OAUTH_TOKEN")
     client_login = secrets.get("DIRECT_CLIENT_LOGIN") or cfg.get("direct_client_login") or ""
+    campaign_ids = [str(c) for c in (cfg.get("direct_campaign_ids") or [])] or None
     if direct_token:
         try:
             direct_win = _fetch_direct_range(window_start, until)
@@ -119,7 +120,7 @@ def run_feed(work_dir: Path, config_path: Path | None = None) -> int:
         errors.append("direct: DIRECT_OAUTH_TOKEN missing")
 
     metrika_token = secrets.get("METRIKA_OAUTH_TOKEN")
-    counter_id = secrets.get("METRIKA_COUNTER_ID") or cfg.get("metrika_counter_id") or ""
+    counter_id = str(cfg.get("metrika_counter_id") or secrets.get("METRIKA_COUNTER_ID") or "")
 
     if metrika_token and counter_id:
         try:
