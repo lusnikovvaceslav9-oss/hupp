@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-19T18:30:19+07:00",
+  "generated_at": "2026-08-19T12:41:37+00:00",
   "project": "hupp",
   "anchor": "2026-07-23",
   "until": "2026-08-19",
@@ -53,19 +53,10 @@
       "csv": "contact_sent"
     }
   ],
-  "sources": {
-    "visits": "metrika_stat",
-    "installs": "metrika_visits",
-    "signup": "metrika_signup_599007245",
-    "checkout": "metrika_checkout_599007665",
-    "purchase": "metrika_purchase_599007827",
-    "contact_info": "metrika_contact_info_598989422",
-    "form_submit": "metrika_form_submit_598989421",
-    "contact_sent": "metrika_contact_sent_598989423"
-  },
+  "sources": {},
   "errors": [
-    "direct: Direct HTTP 400: b'{\"error\":{\"request_id\":\"3203214274922109157\",\"error_string\":\"\\xd0\\x92\\xd0\\xb0\\xd1\\x88 \\xd0\\xbb\\xd0\\xbe\\xd0\\xb3\\xd0\\xb8\\xd0\\xbd \\xd0\\xbd\\xd0\\xb5 \\xd0\\xbf\\xd0\\xbe\\xd0\\xb4\\xd0\\xba\\xd0\\xbb\\xd1\\x8e\\xd1\\x87\\xd0\\xb5\\xd0\\xbd \\xd0\\xba \\xd0\\xaf\\xd0\\xbd\\xd0\\xb4\\xd0\\xb5\\xd0\\xba\\xd1\\x81.\\xd0\\x94\\xd0\\xb8\\xd1\\x80\\xd0\\xb5\\xd0\\xba\\xd1\\x82\\xd1\\x83\",\"error_detail\":\"\",\"error_code\":\"513\"}}'",
-    "direct_full: Direct HTTP 400: b'{\"error\":{\"request_id\":\"1686588760935797155\",\"error_detail\":\"\",\"error_code\":\"513\",\"error_string\":\"\\xd0\\x92\\xd0\\xb0\\xd1\\x88 \\xd0\\xbb\\xd0\\xbe\\xd0\\xb3\\xd0\\xb8\\xd0\\xbd \\xd0\\xbd\\xd0\\xb5 \\xd0\\xbf\\xd0\\xbe\\xd0\\xb4\\xd0\\xba\\xd0\\xbb\\xd1\\x8e\\xd1\\x87\\xd0\\xb5\\xd0\\xbd \\xd0\\xba \\xd0\\xaf\\xd0\\xbd\\xd0\\xb4\\xd0\\xb5\\xd0\\xba\\xd1\\x81.\\xd0\\x94\\xd0\\xb8\\xd1\\x80\\xd0\\xb5\\xd0\\xba\\xd1\\x82\\xd1\\x83\"}}'"
+    "direct: DIRECT_OAUTH_TOKEN missing",
+    "metrika: METRIKA_OAUTH_TOKEN missing"
   ],
   "days": 28,
   "totals": {
