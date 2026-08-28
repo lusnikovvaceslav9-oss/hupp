@@ -1,7 +1,7 @@
 {
   "anchor": "2026-07-01",
-  "until": "2026-08-28",
-  "report_date": "2026-08-28",
+  "until": "2026-08-29",
+  "report_date": "2026-08-29",
   "trial_lag_days": 7,
   "rows": [
     {
@@ -264,6 +264,35 @@
       "mature": false,
       "checkpoint": "2026-09-04",
       "when": "4–5 IX"
+    },
+    {
+      "cohort": "VIII · W5 29–29",
+      "cohort_id": "2026-08-W5",
+      "month_key": "2026-08",
+      "start": "2026-08-29",
+      "end": "2026-08-29",
+      "days": 1,
+      "spend": 0,
+      "installs_am": 0,
+      "trials_sb": 0,
+      "trials_am": 0,
+      "cpi": null,
+      "cpt": null,
+      "install_to_trial_cr": null,
+      "trial_to_paid_cr": null,
+      "trial_to_paid_cr_raw": null,
+      "cac": null,
+      "roas_d7": null,
+      "roas_d7_raw": null,
+      "roas_d14": null,
+      "roas_d30": null,
+      "sold": 0,
+      "paid_net": 0,
+      "pnl": null,
+      "pnl_display": "Рано · 5–6 IX",
+      "mature": false,
+      "checkpoint": "2026-09-05",
+      "when": "5–6 IX"
     }
   ],
   "totals": {
@@ -274,7 +303,7 @@
     "sold": 0,
     "paid_net": 0,
     "pnl_mature_only": 0,
-    "immature_buckets": 1,
+    "immature_buckets": 2,
     "install_to_trial_cr": 6.07,
     "trial_to_paid_cr": 0.0,
     "cac": null,
