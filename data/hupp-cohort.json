@@ -1,7 +1,7 @@
 {
   "anchor": "2026-07-01",
-  "until": "2026-10-06",
-  "report_date": "2026-10-06",
+  "until": "2026-10-07",
+  "report_date": "2026-10-07",
   "trial_lag_days": 7,
   "rows": [
     {
@@ -433,19 +433,19 @@
       "roas_d30": null,
       "sold": 0,
       "paid_net": 0,
-      "pnl": null,
-      "pnl_display": "Рано · 7–8 X",
-      "mature": false,
+      "pnl": 0.0,
+      "pnl_display": "0",
+      "mature": true,
       "checkpoint": "2026-10-07",
-      "when": "7–8 X"
+      "when": "зрелая"
     },
     {
-      "cohort": "X · W1 1–6",
+      "cohort": "X · W1 1–7",
       "cohort_id": "2026-10-W1",
       "month_key": "2026-10",
       "start": "2026-10-01",
-      "end": "2026-10-06",
-      "days": 6,
+      "end": "2026-10-07",
+      "days": 7,
       "spend": 0,
       "installs_am": 0,
       "trials_sb": 0,
@@ -463,10 +463,10 @@
       "sold": 0,
       "paid_net": 0,
       "pnl": null,
-      "pnl_display": "Рано · 13–14 X",
+      "pnl_display": "Рано · 14–15 X",
       "mature": false,
-      "checkpoint": "2026-10-13",
-      "when": "13–14 X"
+      "checkpoint": "2026-10-14",
+      "when": "14–15 X"
     }
   ],
   "totals": {
@@ -477,7 +477,7 @@
     "sold": 0,
     "paid_net": 0,
     "pnl_mature_only": 0,
-    "immature_buckets": 2,
+    "immature_buckets": 1,
     "install_to_trial_cr": 6.07,
     "trial_to_paid_cr": 0.0,
     "cac": null,
