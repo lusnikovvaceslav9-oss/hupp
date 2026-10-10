@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-10T19:45:39+00:00",
+  "generated_at": "2026-10-10T23:14:05+00:00",
   "project": "hupp",
   "anchor": "2026-07-23",
-  "until": "2026-10-10",
-  "window_start": "2026-09-24",
+  "until": "2026-10-11",
+  "window_start": "2026-09-25",
   "metric_map": {
     "installs": "metrika_visits",
     "trials": "reach_pay",
@@ -58,7 +58,7 @@
     "direct: DIRECT_OAUTH_TOKEN missing",
     "metrika: METRIKA_OAUTH_TOKEN missing"
   ],
-  "days": 80,
+  "days": 81,
   "totals": {
     "spend": 0.0,
     "visits": 77,
