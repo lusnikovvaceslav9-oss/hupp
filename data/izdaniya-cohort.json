@@ -1,7 +1,7 @@
 {
   "anchor": "2026-07-23",
-  "until": "2026-10-18",
-  "report_date": "2026-10-18",
+  "until": "2026-10-19",
+  "report_date": "2026-10-19",
   "trial_lag_days": 7,
   "rows": [
     {
@@ -411,12 +411,12 @@
       "when": "21–22 X"
     },
     {
-      "cohort": "X · W3 15–18",
+      "cohort": "X · W3 15–19",
       "cohort_id": "2026-10-W3",
       "month_key": "2026-10",
       "start": "2026-10-15",
-      "end": "2026-10-18",
-      "days": 4,
+      "end": "2026-10-19",
+      "days": 5,
       "spend": 0,
       "installs_am": 0,
       "trials_sb": 0,
@@ -434,10 +434,10 @@
       "sold": 0,
       "paid_net": 0,
       "pnl": null,
-      "pnl_display": "Рано · 25–26 X",
+      "pnl_display": "Рано · 26–27 X",
       "mature": false,
-      "checkpoint": "2026-10-25",
-      "when": "25–26 X"
+      "checkpoint": "2026-10-26",
+      "when": "26–27 X"
     }
   ],
   "totals": {
